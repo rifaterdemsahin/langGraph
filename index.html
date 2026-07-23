@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LangGraph + LangChain — Graph RAG PoC</title>
+<meta name="description" content="Why, how, and what of a graph-enhanced RAG proof-of-concept built with LangChain and LangGraph." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='80'%3E%F0%9F%95%B8%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --bg-alt: #ffffff;
+    --text: #1c1c1e;
+    --text-dim: #55555c;
+    --border: #e2e1dd;
+    --accent: #7a5cff;
+    --accent-2: #10a37f;
+    --accent-3: #e08a2d;
+    --warn: #d1483d;
+    --code-bg: #efeee9;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+  }
+  :root[data-theme="dark"] {
+    --bg: #15151a;
+    --bg-alt: #1d1d24;
+    --text: #eceaf5;
+    --text-dim: #a2a0b3;
+    --border: #313140;
+    --accent: #a48bff;
+    --accent-2: #3ddc9a;
+    --accent-3: #f2a54a;
+    --warn: #ff8177;
+    --code-bg: #26262f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 30px rgba(0,0,0,0.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15151a;
+      --bg-alt: #1d1d24;
+      --text: #eceaf5;
+      --text-dim: #a2a0b3;
+      --border: #313140;
+      --accent: #a48bff;
+      --accent-2: #3ddc9a;
+      --accent-3: #f2a54a;
+      --warn: #ff8177;
+      --code-bg: #26262f;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 30px rgba(0,0,0,0.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    line-height: 1.55;
+  }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 6rem;
+  }
+
+  nav.topnav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.topnav .topnav-inner {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  nav.topnav .brand {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+    text-decoration: none;
+    margin-right: 0.4rem;
+    flex: none;
+  }
+  nav.topnav a.nav-link {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    flex: none;
+  }
+  nav.topnav a.nav-link:hover { color: var(--accent); }
+  nav.topnav a.nav-link.external::after { content: " ↗"; font-size: 0.75em; }
+  nav.topnav a.nav-highlight {
+    margin-left: auto;
+    flex: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+    text-decoration: none;
+  }
+  nav.topnav a.nav-highlight:hover { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+
+  header.hero {
+    padding: 2.5rem 0 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2.5rem;
+  }
+  .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.72rem;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+  }
+  h1 {
+    font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+    margin: 0 0 0.6rem;
+    letter-spacing: -0.02em;
+  }
+  .hero p.lead {
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    max-width: 62ch;
+    margin: 0 0 1.2rem;
+  }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .pill {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--bg-alt);
+  }
+
+  section { margin: 3.2rem 0; }
+  section > h2 {
+    font-size: 1.4rem;
+    margin: 0 0 0.3rem;
+    letter-spacing: -0.01em;
+  }
+  section > .section-sub {
+    color: var(--text-dim);
+    margin: 0 0 1.4rem;
+    max-width: 68ch;
+  }
+
+  .card {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 1.4rem 1.5rem;
+  }
+
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 720px) { .why-grid { grid-template-columns: 1fr; } }
+  .why-card {
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+  }
+  .why-card .tag {
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .why-card:nth-child(1) .tag { color: var(--accent); }
+  .why-card:nth-child(2) .tag { color: var(--accent-3); }
+  .why-card:nth-child(3) .tag { color: var(--accent-2); }
+  .why-card p { color: var(--text-dim); font-size: 0.93rem; margin: 0.4rem 0 0; }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-alt);
+    box-shadow: var(--shadow);
+    padding: 0.5rem;
+  }
+  .diagram-scroll svg { display: block; min-width: 640px; }
+  .diagram-caption {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-top: 0.6rem;
+  }
+
+  code, pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  code { background: var(--code-bg); padding: 0.1rem 0.35rem; border-radius: 5px; font-size: 0.88em; }
+
+  /* --- demo --- */
+  .demo-controls {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+  }
+  select, button.run-btn {
+    font-size: 0.92rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+  }
+  button.run-btn {
+    background: var(--accent);
+    color: white;
+    border-color: transparent;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.run-btn:active { transform: translateY(1px); }
+  button.run-btn:disabled { opacity: 0.6; cursor: default; }
+
+  .demo-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 1.2rem;
+  }
+  @media (max-width: 780px) { .demo-grid { grid-template-columns: 1fr; } }
+
+  .graph-wrap {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-alt);
+    box-shadow: var(--shadow);
+    padding: 0.6rem;
+  }
+  .graph-wrap svg { width: 100%; height: auto; display: block; }
+
+  .node-circle {
+    stroke: var(--border);
+    stroke-width: 1.5;
+    fill: var(--code-bg);
+    transition: fill 0.35s ease, stroke 0.35s ease;
+  }
+  .node-label {
+    font-size: 9px;
+    fill: var(--text-dim);
+    text-anchor: middle;
+    pointer-events: none;
+  }
+  .edge-line {
+    stroke: var(--border);
+    stroke-width: 1.3;
+    marker-end: url(#arrow);
+    fill: none;
+    transition: stroke 0.35s ease, stroke-width 0.35s ease;
+  }
+  .node-circle.hit-semantic { fill: color-mix(in srgb, var(--accent) 30%, var(--bg-alt)); stroke: var(--accent); }
+  .node-circle.hit-graph { fill: color-mix(in srgb, var(--accent-3) 28%, var(--bg-alt)); stroke: var(--accent-3); }
+  .edge-line.hit { stroke: var(--accent-3); stroke-width: 2.2; }
+
+  .log-panel {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-alt);
+    box-shadow: var(--shadow);
+    padding: 1rem 1.1rem;
+    min-height: 300px;
+  }
+  .log-panel h3 { margin: 0 0 0.6rem; font-size: 0.95rem; }
+  .log-step {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    margin-bottom: 0.85rem;
+    opacity: 0;
+    transform: translateY(4px);
+    animation: fadeUp 0.4s ease forwards;
+  }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .step-dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; color: white;
+    margin-top: 0.1rem;
+  }
+  .step-dot.n1 { background: var(--accent); }
+  .step-dot.n2 { background: var(--accent-3); }
+  .step-dot.n3 { background: var(--accent-2); }
+  .log-step .body b { display: block; font-size: 0.87rem; }
+  .log-step .body span { font-size: 0.83rem; color: var(--text-dim); }
+  .answer-box {
+    margin-top: 0.4rem;
+    border-left: 3px solid var(--accent-2);
+    padding: 0.5rem 0.8rem;
+    background: color-mix(in srgb, var(--accent-2) 8%, var(--bg-alt));
+    border-radius: 0 8px 8px 0;
+    font-size: 0.88rem;
+  }
+  .placeholder-hint {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+
+  /* --- learning path --- */
+  .lp-legend { display:flex; flex-wrap:wrap; gap: 0.9rem; margin-top: 1rem; font-size: 0.8rem; color: var(--text-dim); }
+  .lp-legend span.dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:0.35rem; vertical-align:middle; }
+  .lp-node a { text-decoration: none; }
+  .lp-node text.title { font-weight: 700; }
+  .lp-node .lp-box {
+    fill: var(--bg-alt);
+    stroke: var(--border);
+    stroke-width: 1.4;
+    transition: stroke 0.2s ease, fill 0.2s ease;
+  }
+  .lp-node:hover .lp-box { stroke: var(--accent); fill: color-mix(in srgb, var(--accent) 10%, var(--bg-alt)); }
+  .lp-node text.title { fill: var(--text); }
+  .lp-node text.verb { fill: var(--text-dim); font-size: 8.5px; font-style: italic; }
+  .lp-edge { stroke: var(--border); stroke-width: 1.4; fill: none; marker-end: url(#arrow2); }
+
+  table.links {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  table.links th, table.links td {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+  table.links th { color: var(--text-dim); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  table.links a { color: var(--accent); text-decoration: none; }
+  table.links a:hover { text-decoration: underline; }
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.9rem;
+  }
+  @media (max-width: 720px) { .concept-grid { grid-template-columns: 1fr; } }
+  .concept-card {
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+  }
+  .concept-card h4 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+  .concept-card p { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--text-dim); }
+  .concept-card ul { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; }
+  .concept-card li { margin-bottom: 0.3rem; }
+  .concept-card a { color: var(--accent); text-decoration: none; }
+  .concept-card a:hover { text-decoration: underline; }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="#top">🕸️ LangGraph PoC</a>
+    <a class="nav-link" href="#why">Why</a>
+    <a class="nav-link" href="#how">How</a>
+    <a class="nav-link" href="#what">Demo</a>
+    <a class="nav-link" href="#learn-path">Learning Path</a>
+    <a class="nav-link" href="#concepts">Concepts</a>
+    <a class="nav-link" href="#repo-docs">Docs</a>
+    <a class="nav-link external" href="https://github.com/rifaterdemsahin/langGraph/blob/main/6_Symbols/run_graph_rag.py" target="_blank" rel="noopener">run_graph_rag.py</a>
+    <a class="nav-link external" href="https://github.com/rifaterdemsahin/langGraph/blob/main/6_Symbols/ingest.py" target="_blank" rel="noopener">ingest.py</a>
+    <a class="nav-highlight" href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_qdrant_scale.md" target="_blank" rel="noopener">Qdrant @ 200k+ files</a>
+  </div>
+</nav>
+
+<main id="top">
+
+  <header class="hero">
+    <div class="kicker">LangChain + LangGraph · Proof of Concept</div>
+    <h1>Graph-enhanced RAG over your own Markdown notes</h1>
+    <p class="lead">
+      This project answers three questions for anyone picking up LangChain and LangGraph for the
+      first time: <strong>why</strong> combine a vector store with a link graph, <strong>how</strong> the
+      pipeline is wired together as a stateful graph, and <strong>what</strong> that looks like when it
+      actually runs, node by node.
+    </p>
+    <div class="pill-row">
+      <span class="pill">🐍 6_Symbols/run_graph_rag.py — runnable PoC</span>
+      <span class="pill">🕸️ LangGraph StateGraph, 3 nodes</span>
+      <span class="pill">🔎 LangChain load + split + embed + retrieve</span>
+      <span class="pill">📚 8-folder learning structure</span>
+    </div>
+  </header>
+
+  <!-- WHY -->
+  <section id="why">
+    <h2>Why this exists</h2>
+    <p class="section-sub">
+      Plain semantic search over Markdown notes misses the thing that makes Obsidian-style vaults
+      useful: the <code>[[wiki-links]]</code> between notes. A pure vector search only finds notes that
+      sound similar to your query — it can't follow a hop to a note that's related but phrased
+      differently. Graph RAG fixes that by treating the link graph as a second retrieval signal.
+    </p>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="tag">Problem</div>
+        <p>Semantic search alone stops at the first hit. A note two links away that fully answers
+        the question never surfaces because its wording doesn't match the query.</p>
+      </div>
+      <div class="why-card">
+        <div class="tag">Idea</div>
+        <p>Use LangChain for the parts it's good at — loading, chunking, embedding, vector search —
+        and LangGraph to explicitly orchestrate the extra "follow the links" step as graph state.</p>
+      </div>
+      <div class="why-card">
+        <div class="tag">Payoff</div>
+        <p>The LLM gets both the notes that <em>sound</em> relevant and the notes that are
+        <em>structurally connected</em> to them — a strictly richer context window.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW -->
+  <section id="how">
+    <h2>How it's wired</h2>
+    <p class="section-sub">
+      LangChain owns document loading, chunking, embeddings, and the vector store. LangGraph owns the
+      control flow: a small state machine with three nodes that runs the same way every time, so the
+      steps are inspectable and easy to extend (e.g. add a re-ranker node without touching the rest).
+    </p>
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 920 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram: markdown docs are loaded by LangChain into a vector store and a link graph, then LangGraph orchestrates three nodes to produce an answer.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--text-dim)"></path>
+          </marker>
+        </defs>
+
+        <!-- source docs -->
+        <g>
+          <rect x="20" y="150" width="120" height="60" rx="10" class="node-circle" style="fill:var(--code-bg)"></rect>
+          <text x="80" y="175" class="node-label" style="font-size:11px;fill:var(--text)">Markdown</text>
+          <text x="80" y="190" class="node-label" style="font-size:11px;fill:var(--text)">/doc/*.md</text>
+          <text x="80" y="140" class="node-label" style="font-size:9px">[[wiki-links]]</text>
+        </g>
+        <line x1="140" y1="180" x2="185" y2="180" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>
+
+        <!-- LangChain box -->
+        <g>
+          <rect x="190" y="90" width="170" height="180" rx="12" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="4 3"></rect>
+          <text x="275" y="78" text-anchor="middle" style="font-size:11px;font-weight:700;fill:var(--accent)">LangChain</text>
+
+          <rect x="210" y="105" width="130" height="34" rx="8" class="node-circle"></rect>
+          <text x="275" y="127" class="node-label" style="fill:var(--text)">Load + split</text>
+
+          <line x1="275" y1="139" x2="275" y2="150" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>
+
+          <rect x="210" y="150" width="130" height="34" rx="8" class="node-circle"></rect>
+          <text x="275" y="172" class="node-label" style="fill:var(--text)">Embed</text>
+
+          <line x1="275" y1="184" x2="275" y2="196" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>
+
+          <rect x="210" y="196" width="130" height="34" rx="8" class="node-circle"></rect>
+          <text x="275" y="218" class="node-label" style="fill:var(--text)">Chroma vector store</text>
+        </g>
+
+        <!-- link graph, extracted in parallel -->
+        <line x1="80" y1="150" x2="80" y2="50" stroke="var(--text-dim)" stroke-width="1.3"></line>
+        <line x1="80" y1="50" x2="450" y2="50" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>
+        <rect x="450" y="25" width="150" height="50" rx="10" class="node-circle"></rect>
+        <text x="525" y="47" class="node-label" style="fill:var(--text)">[[link]] graph</text>
+        <text x="525" y="60" class="node-label" style="font-size:8px">dict (PoC) / Neo4j (prod)</text>
+
+        <!-- LangGraph box -->
+        <line x1="360" y1="213" x2="405" y2="213" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>
+        <g>
+          <rect x="410" y="90" width="420" height="220" rx="12" fill="none" stroke="var(--accent-3)" stroke-width="1.4" stroke-dasharray="4 3"></rect>
+          <text x="620" y="78" text-anchor="middle" style="font-size:11px;font-weight:700;fill:var(--accent-3)">LangGraph — StateGraph(GraphRAGState)</text>
+
+          <rect x="430" y="115" width="120" height="50" rx="10" class="node-circle" style="stroke:var(--accent)"></rect>
+          <text x="490" y="136" class="node-label" style="fill:var(--text);font-weight:600">semantic_</text>
+          <text x="490" y="148" class="node-label" style="fill:var(--text);font-weight:600">retriever</text>
+
+          <line x1="550" y1="140" x2="588" y2="140" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>
+
+          <rect x="592" y="115" width="120" height="50" rx="10" class="node-circle" style="stroke:var(--accent-3)"></rect>
+          <text x="652" y="136" class="node-label" style="fill:var(--text);font-weight:600">graph_</text>
+          <text x="652" y="148" class="node-label" style="fill:var(--text);font-weight:600">traverser</text>
+
+          <line x1="712" y1="140" x2="750" y2="140" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>
+
+          <rect x="754" y="115" width="60" height="50" rx="10" class="node-circle" style="stroke:var(--accent-2)"></rect>
+          <text x="784" y="136" class="node-label" style="fill:var(--text);font-weight:600">gener-</text>
+          <text x="784" y="148" class="node-label" style="fill:var(--text);font-weight:600">ate</text>
+
+          <text x="620" y="210" text-anchor="middle" style="font-size:9.5px;fill:var(--text-dim)">state: query → initial_docs → graph_docs → all_docs → final_answer</text>
+
+          <line x1="490" y1="165" x2="490" y2="196" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="2 2"></line>
+          <text x="490" y="235" text-anchor="middle" style="font-size:8px;fill:var(--text-dim)">reads Chroma</text>
+
+          <line x1="652" y1="165" x2="652" y2="196" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="2 2"></line>
+          <text x="652" y="235" text-anchor="middle" style="font-size:8px;fill:var(--text-dim)">reads link graph</text>
+
+          <line x1="784" y1="165" x2="784" y2="196" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="2 2"></line>
+          <text x="784" y="240" text-anchor="middle" style="font-size:8px;fill:var(--text-dim)">calls the LLM</text>
+        </g>
+
+        <!-- link graph feeds traverser -->
+        <path d="M525,75 C525,140 590,140 590,140" stroke="var(--text-dim)" stroke-width="1.3" fill="none" marker-end="url(#arrow)"></path>
+
+        <!-- output -->
+        <line x1="830" y1="140" x2="875" y2="140" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>
+        <rect x="855" y="115" width="60" height="50" rx="10" style="fill:color-mix(in srgb, var(--accent-2) 18%, var(--bg-alt));stroke:var(--accent-2);stroke-width:1.4"></rect>
+        <text x="885" y="136" class="node-label" style="fill:var(--text);font-weight:700">Final</text>
+        <text x="885" y="148" class="node-label" style="fill:var(--text);font-weight:700">answer</text>
+      </svg>
+    </div>
+    <p class="diagram-caption">
+      Two retrieval signals feed the graph: the vector store (semantic similarity) and the link graph
+      (structural relationships). <code>graph_traverser</code> is the node that makes this a <em>graph</em>
+      RAG system instead of plain RAG.
+    </p>
+  </section>
+
+  <!-- WHAT / DEMO -->
+  <section id="what">
+    <h2>What it looks like when it runs</h2>
+    <p class="section-sub">
+      This is a client-side illustration of the exact same 10-document graph and 3-node pipeline as
+      <code>6_Symbols/run_graph_rag.py</code> — pick a question and watch each LangGraph node light up
+      in order. It's a teaching visualization (word-overlap scoring, not real embeddings); for a real
+      run with actual embeddings and an LLM, use the Python script.
+    </p>
+
+    <div class="card">
+      <div class="demo-controls">
+        <select id="query-select">
+          <option value="0">What is Deep Learning and how does it relate to NLP?</option>
+          <option value="1">How does AI Ethics relate to Machine Learning?</option>
+          <option value="2">What powers Computer Vision applications?</option>
+          <option value="3">Where does the future of AI lead?</option>
+        </select>
+        <button id="run-btn" class="run-btn">▶ Run the graph</button>
+      </div>
+
+      <div class="demo-grid">
+        <div class="graph-wrap">
+          <svg id="graph-svg" viewBox="0 0 460 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="10-document link graph used by the demo">
+            <defs>
+              <marker id="arrow-demo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--border)"></path>
+              </marker>
+            </defs>
+            <g id="edges"></g>
+            <g id="nodes"></g>
+          </svg>
+        </div>
+        <div class="log-panel">
+          <h3>Node-by-node trace</h3>
+          <div id="log-steps">
+            <p class="placeholder-hint">Choose a question above and click "Run the graph" to see
+            <code>semantic_retriever</code> → <code>graph_traverser</code> → <code>generate_answer</code>
+            execute in order.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEARNING PATH -->
+  <section id="learn-path">
+    <h2>How to learn this, step by step</h2>
+    <p class="section-sub">
+      The repo is organized as an 8-folder learning loop. Each folder answers a different question
+      about the same project — click a box to open that folder on GitHub.
+    </p>
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Learning path diagram showing the 8 folders in sequence, looping back to the start">
+        <defs>
+          <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--border)"></path>
+          </marker>
+        </defs>
+        <!-- edges: sequential ring, drawn first so nodes sit on top -->
+        <path class="lp-edge" d="M150,60 L330,60"></path>
+        <path class="lp-edge" d="M470,60 L650,60"></path>
+        <path class="lp-edge" d="M790,80 C 860,140 860,280 790,340"></path>
+        <path class="lp-edge" d="M650,360 L470,360"></path>
+        <path class="lp-edge" d="M330,360 L150,360"></path>
+        <path class="lp-edge" d="M90,340 C 30,280 30,140 90,80"></path>
+        <path class="lp-edge" d="M220,90 C 260,160 260,260 220,330" stroke-dasharray="3 3"></path>
+        <path class="lp-edge" d="M720,90 C 680,160 680,260 720,330" stroke-dasharray="3 3"></path>
+
+        <!-- 8 nodes around a ring -->
+        <g class="lp-node">
+          <a href="https://github.com/rifaterdemsahin/langGraph/tree/main/1_Journey" target="_blank" rel="noopener">
+            <rect class="lp-box" x="20" y="30" width="130" height="60" rx="12"></rect>
+            <text class="title" x="85" y="55" text-anchor="middle" style="font-size:11px">1_Journey</text>
+            <text class="verb" x="85" y="72" text-anchor="middle">feel it — story &amp; steps</text>
+          </a>
+        </g>
+        <g class="lp-node">
+          <a href="https://github.com/rifaterdemsahin/langGraph/tree/main/2_Real" target="_blank" rel="noopener">
+            <rect class="lp-box" x="335" y="30" width="130" height="60" rx="12"></rect>
+            <text class="title" x="400" y="55" text-anchor="middle" style="font-size:11px">2_Real</text>
+            <text class="verb" x="400" y="72" text-anchor="middle">aim at it — OKRs</text>
+          </a>
+        </g>
+        <g class="lp-node">
+          <a href="https://github.com/rifaterdemsahin/langGraph/tree/main/3_Environment" target="_blank" rel="noopener">
+            <rect class="lp-box" x="655" y="30" width="130" height="60" rx="12"></rect>
+            <text class="title" x="720" y="55" text-anchor="middle" style="font-size:11px">3_Environment</text>
+            <text class="verb" x="720" y="72" text-anchor="middle">create it — roadmap</text>
+          </a>
+        </g>
+        <g class="lp-node">
+          <a href="https://github.com/rifaterdemsahin/langGraph/tree/main/4_UI" target="_blank" rel="noopener">
+            <rect class="lp-box" x="795" y="150" width="120" height="60" rx="12"></rect>
+            <text class="title" x="855" y="175" text-anchor="middle" style="font-size:11px">4_UI</text>
+            <text class="verb" x="855" y="192" text-anchor="middle">imagine it — concepts</text>
+          </a>
+        </g>
+        <g class="lp-node">
+          <a href="https://github.com/rifaterdemsahin/langGraph/tree/main/5_Formula" target="_blank" rel="noopener">
+            <rect class="lp-box" x="655" y="330" width="130" height="60" rx="12"></rect>
+            <text class="title" x="720" y="355" text-anchor="middle" style="font-size:11px">5_Formula</text>
+            <text class="verb" x="720" y="372" text-anchor="middle">learn from it — guides</text>
+          </a>
+        </g>
+        <g class="lp-node">
+          <a href="https://github.com/rifaterdemsahin/langGraph/tree/main/6_Symbols" target="_blank" rel="noopener">
+            <rect class="lp-box" x="335" y="330" width="130" height="60" rx="12" style="stroke:var(--accent);stroke-width:2"></rect>
+            <text class="title" x="400" y="355" text-anchor="middle" style="font-size:11px;fill:var(--accent)">6_Symbols</text>
+            <text class="verb" x="400" y="372" text-anchor="middle">execute it — code (you are here)</text>
+          </a>
+        </g>
+        <g class="lp-node">
+          <a href="https://github.com/rifaterdemsahin/langGraph/tree/main/7_Semblance" target="_blank" rel="noopener">
+            <rect class="lp-box" x="20" y="330" width="130" height="60" rx="12"></rect>
+            <text class="title" x="85" y="355" text-anchor="middle" style="font-size:11px">7_Semblance</text>
+            <text class="verb" x="85" y="372" text-anchor="middle">fix it — errors &amp; fixes</text>
+          </a>
+        </g>
+        <g class="lp-node">
+          <a href="https://github.com/rifaterdemsahin/langGraph/tree/main/8_Test" target="_blank" rel="noopener">
+            <rect class="lp-box" x="5" y="150" width="120" height="60" rx="12"></rect>
+            <text class="title" x="65" y="175" text-anchor="middle" style="font-size:11px">8_Test</text>
+            <text class="verb" x="65" y="192" text-anchor="middle">test it — validation</text>
+          </a>
+        </g>
+
+        <text x="460" y="215" text-anchor="middle" style="font-size:9.5px; fill:var(--text-dim)">loop: each pass through 1→8 deepens the same project</text>
+      </svg>
+    </div>
+    <div class="lp-legend">
+      <div><span class="dot" style="background:var(--accent)"></span>solid arrows = suggested order</div>
+      <div><span class="dot" style="background:var(--text-dim)"></span>dashed lines = cross-reference while you work</div>
+    </div>
+  </section>
+
+  <!-- CONCEPT LINKS -->
+  <section id="concepts">
+    <h2>Links to learn the underlying concepts</h2>
+    <p class="section-sub">Primary sources for the ideas this PoC is built on.</p>
+    <div class="concept-grid">
+      <div class="concept-card">
+        <h4>LangGraph — stateful graphs</h4>
+        <p>The orchestration layer used for the 3-node workflow in this repo.</p>
+        <ul>
+          <li><a href="https://langchain-ai.github.io/langgraph/" target="_blank" rel="noopener">LangGraph documentation</a></li>
+          <li><a href="https://langchain-ai.github.io/langgraph/concepts/low_level/" target="_blank" rel="noopener">Core concepts: StateGraph, nodes, edges</a></li>
+        </ul>
+      </div>
+      <div class="concept-card">
+        <h4>LangChain — loaders, splitters, retrieval</h4>
+        <p>Used here for document loading, chunking, embeddings, and the vector store.</p>
+        <ul>
+          <li><a href="https://python.langchain.com/docs/introduction/" target="_blank" rel="noopener">LangChain documentation</a></li>
+          <li><a href="https://python.langchain.com/docs/concepts/retrieval/" target="_blank" rel="noopener">Retrieval concepts</a></li>
+        </ul>
+      </div>
+      <div class="concept-card">
+        <h4>RAG (Retrieval-Augmented Generation)</h4>
+        <p>The general pattern this whole project is an implementation of.</p>
+        <ul>
+          <li><a href="https://python.langchain.com/docs/tutorials/rag/" target="_blank" rel="noopener">RAG tutorial (LangChain)</a></li>
+          <li><a href="https://www.pinecone.io/learn/retrieval-augmented-generation/" target="_blank" rel="noopener">RAG explained (Pinecone)</a></li>
+        </ul>
+      </div>
+      <div class="concept-card">
+        <h4>Vector stores &amp; graph databases</h4>
+        <p>The two persistence backends the production version (see <code>5_Formula/formula_size.md</code>) moves to.</p>
+        <ul>
+          <li><a href="https://docs.trychroma.com/" target="_blank" rel="noopener">Chroma docs</a></li>
+          <li><a href="https://neo4j.com/docs/getting-started/cypher-intro/" target="_blank" rel="noopener">Neo4j Cypher intro</a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECT DOCS -->
+  <section id="repo-docs">
+    <h2>Guides in this repo</h2>
+    <table class="links">
+      <thead><tr><th>Doc</th><th>What it covers</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_poc.md" target="_blank" rel="noopener">formula_poc.md</a></td>
+          <td>The full PoC walkthrough this page visualizes</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_size.md" target="_blank" rel="noopener">formula_size.md</a></td>
+          <td>Why the in-memory PoC breaks at scale, and the fix</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_ingest.md" target="_blank" rel="noopener">formula_ingest.md</a></td>
+          <td>Incremental ingestion pipeline into Neo4j + Chroma</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_qdrant_scale.md" target="_blank" rel="noopener">formula_qdrant_scale.md</a></td>
+          <td>Rationale: what a 200k+ file second brain needs from Qdrant + LangGraph</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/rifaterdemsahin/langGraph/blob/main/1_Journey/okr.md" target="_blank" rel="noopener">okr.md</a></td>
+          <td>Objectives and key results driving this project</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/rifaterdemsahin/langGraph/tree/main/6_Symbols" target="_blank" rel="noopener">6_Symbols/</a></td>
+          <td><code>run_graph_rag.py</code> (runnable PoC) and <code>ingest.py</code> (production pipeline)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <p>
+      <a href="https://github.com/rifaterdemsahin/langGraph" target="_blank" rel="noopener">rifaterdemsahin/langGraph</a>
+      — LangChain + LangGraph graph RAG proof of concept.
+    </p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  // Same link graph as 6_Symbols/run_graph_rag.py's doc/ fixtures.
+  const DOCS = {
+    doc1_intro:        { label: "1: Intro to AI",       text: "introduction ai broad field machine learning" },
+    doc2_ml:            { label: "2: Machine Learning",  text: "machine learning ml subset ai data train models deep learning" },
+    doc3_deep_learning: { label: "3: Deep Learning",     text: "deep learning dl subset ml neural networks computer vision nlp" },
+    doc4_cv:            { label: "4: Computer Vision",   text: "computer vision cv computers see image recognition applications" },
+    doc5_nlp:           { label: "5: NLP",               text: "natural language processing nlp computers understand language chatbots transformers" },
+    doc6_transformers:  { label: "6: Transformers",      text: "transformers architecture deep learning nlp attention" },
+    doc7_history:       { label: "7: History of AI",     text: "history ai 1950s early concepts intro" },
+    doc8_ethics:        { label: "8: AI Ethics",         text: "ai ethics critical field bias machine learning societal impact" },
+    doc9_applications:  { label: "9: Applications",      text: "ai applications computer vision self driving cars nlp translation" },
+    doc10_future:       { label: "10: Future of AI",     text: "future ai agi builds deep learning" }
+  };
+
+  const LINKS = {
+    doc1_intro: ["doc2_ml"],
+    doc2_ml: ["doc3_deep_learning"],
+    doc3_deep_learning: ["doc4_cv", "doc5_nlp"],
+    doc4_cv: ["doc9_applications"],
+    doc5_nlp: ["doc6_transformers"],
+    doc6_transformers: ["doc5_nlp"],
+    doc7_history: ["doc1_intro"],
+    doc8_ethics: ["doc2_ml"],
+    doc9_applications: ["doc4_cv", "doc5_nlp"],
+    doc10_future: ["doc3_deep_learning"]
+  };
+
+  const QUERIES = [
+    "What is Deep Learning and how does it relate to NLP?",
+    "How does AI Ethics relate to Machine Learning?",
+    "What powers Computer Vision applications?",
+    "Where does the future of AI lead?"
+  ];
+
+  // Layout: ring of 10 nodes.
+  const cx = 230, cy = 190, r = 140;
+  const keys = Object.keys(DOCS);
+  const pos = {};
+  keys.forEach((k, i) => {
+    const angle = (i / keys.length) * Math.PI * 2 - Math.PI / 2;
+    pos[k] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
+
+  const edgesG = document.getElementById("edges");
+  const nodesG = document.getElementById("nodes");
+
+  Object.entries(LINKS).forEach(([src, targets]) => {
+    targets.forEach(tgt => {
+      const a = pos[src], b = pos[tgt];
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", a.x); line.setAttribute("y1", a.y);
+      line.setAttribute("x2", b.x); line.setAttribute("y2", b.y);
+      line.setAttribute("class", "edge-line");
+      line.setAttribute("marker-end", "url(#arrow-demo)");
+      line.dataset.pair = src + "->" + tgt;
+      edgesG.appendChild(line);
+    });
+  });
+
+  keys.forEach(k => {
+    const p = pos[k];
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", p.x); circle.setAttribute("cy", p.y); circle.setAttribute("r", 26);
+    circle.setAttribute("class", "node-circle");
+    circle.dataset.doc = k;
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", p.x); text.setAttribute("y", p.y + 3);
+    text.setAttribute("class", "node-label");
+    text.textContent = DOCS[k].label.split(":")[0];
+    g.appendChild(circle);
+    g.appendChild(text);
+    nodesG.appendChild(g);
+  });
+
+  function score(query, text) {
+    const qWords = query.toLowerCase().replace(/[^a-z ]/g, "").split(/\s+/).filter(Boolean);
+    const tWords = new Set(text.split(/\s+/));
+    let s = 0;
+    qWords.forEach(w => { if (tWords.has(w)) s++; });
+    return s;
+  }
+
+  function resetGraph() {
+    document.querySelectorAll(".node-circle").forEach(c => c.setAttribute("class", "node-circle"));
+    document.querySelectorAll(".edge-line").forEach(e => e.setAttribute("class", "edge-line"));
+  }
+
+  function highlightNode(key, cls) {
+    const el = document.querySelector('.node-circle[data-doc="' + key + '"]');
+    if (el) el.setAttribute("class", "node-circle " + cls);
+  }
+
+  function highlightEdge(src, tgt) {
+    const el = document.querySelector('.edge-line[data-pair="' + src + "->" + tgt + '"]');
+    if (el) el.classList.add("hit");
+  }
+
+  const logEl = document.getElementById("log-steps");
+  function addStep(cls, title, detail) {
+    return new Promise(resolve => {
+      const div = document.createElement("div");
+      div.className = "log-step";
+      div.innerHTML = '<div class="step-dot ' + cls + '">' + (cls === "n1" ? "1" : cls === "n2" ? "2" : "3") + '</div>' +
+        '<div class="body"><b>' + title + '</b><span>' + detail + '</span></div>';
+      logEl.appendChild(div);
+      setTimeout(resolve, 550);
+    });
+  }
+
+  async function runDemo() {
+    const btn = document.getElementById("run-btn");
+    btn.disabled = true;
+    resetGraph();
+    logEl.innerHTML = "";
+
+    const query = QUERIES[document.getElementById("query-select").value];
+    await addStep("n1", "semantic_retriever", 'Query: "' + query + '"');
+
+    const ranked = keys
+      .map(k => ({ k, s: score(query, DOCS[k].text) }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 2)
+      .map(x => x.k);
+
+    ranked.forEach(k => highlightNode(k, "hit-semantic"));
+    await addStep("n1", "Found " + ranked.length + " semantic hits", ranked.map(k => DOCS[k].label).join(", "));
+
+    await addStep("n2", "graph_traverser", "Following [[links]] out of each semantic hit…");
+    const graphDocs = new Set();
+    for (const src of ranked) {
+      for (const tgt of (LINKS[src] || [])) {
+        highlightEdge(src, tgt);
+        highlightNode(tgt, "hit-graph");
+        graphDocs.add(tgt);
+      }
+    }
+    await addStep("n2", "Found " + graphDocs.size + " graph-linked doc(s)",
+      graphDocs.size ? [...graphDocs].map(k => DOCS[k].label).join(", ") : "none");
+
+    const allDocs = [...new Set([...ranked, ...graphDocs])];
+    await addStep("n3", "generate_answer", "Context = " + allDocs.length + " document(s): " + allDocs.map(k => DOCS[k].label).join(", "));
+
+    const div = document.createElement("div");
+    div.className = "log-step";
+    div.style.animationDelay = "0s";
+    div.innerHTML = '<div class="step-dot n3">✓</div><div class="body"><b>Final answer</b>' +
+      '<div class="answer-box">Mock answer assembled from ' + allDocs.length + ' retrieved document(s). ' +
+      'Run <code>python 6_Symbols/run_graph_rag.py "' + query.replace(/"/g, "&quot;") + '"</code> ' +
+      'locally (with <code>OPENAI_API_KEY</code> set) for a real, LLM-generated answer.</div></div>';
+    logEl.appendChild(div);
+
+    btn.disabled = false;
+  }
+
+  document.getElementById("run-btn").addEventListener("click", runDemo);
+})();
+</script>
+</body>
+</html>
