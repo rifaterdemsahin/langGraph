@@ -492,6 +492,21 @@
     font-size: 0.9rem;
   }
   .qa-source { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.8rem; }
+  .qa-figure {
+    margin: 0 0 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--code-bg);
+  }
+  .qa-figure img { display: block; width: 100%; height: auto; }
+  .qa-figure figcaption {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    background: var(--bg-alt);
+  }
 
   footer {
     margin-top: 4rem;
@@ -1031,6 +1046,52 @@
             mesh size; following related documents changes what the net can catch in the first
             place.
           </div>
+        </div>
+      </div>
+
+      <div class="qa-card">
+        <p class="q"><span class="qmark">Q</span> In the demo trace for "What powers Computer Vision applications?", why does the graph jump through <strong>Node 9 (Applications)</strong> to surface <strong>Node 5 (NLP)</strong> — and does that actually make the LLM's attention "better"?</p>
+        <div class="a">
+          <figure class="qa-figure">
+            <img src="4_UI/jump%20to%209.jpeg" alt="Demo trace for the query 'What powers Computer Vision applications?' showing semantic hits on nodes 4 and 9, with an orange edge from node 9 reaching node 5 (NLP) via graph traversal" loading="lazy" />
+            <figcaption>The actual demo trace: <code>semantic_retriever</code> finds nodes 4 and 9; <code>graph_traverser</code> follows node 9's link to pull in node 5.</figcaption>
+          </figure>
+          <p>
+            Yes — Node 9 is the bridge. In the fixture graph, <code>doc9_applications</code> links
+            to <em>both</em> <code>doc4_cv</code> and <code>doc5_nlp</code>, while
+            <code>doc4_cv</code> only links back to <code>doc9</code>. So once
+            <code>semantic_retriever</code> finds nodes 4 and 9 by wording alone, walking node 9's
+            links is what reaches node 5 — a document that shares essentially no vocabulary with
+            "Computer Vision applications" and would never have surfaced from embeddings alone.
+          </p>
+          <p><strong>Does this improve context sorting?</strong> Yes, and specifically how. Pure
+          semantic search ranks purely by cosine similarity, which tends to return redundant
+          near-duplicates of whatever hit first and has no way to reach a relevant-but-differently-worded
+          neighbor. Layering <code>graph_traverser</code> on top adds a second, different ordering
+          principle: after semantic search picks the entry points (4, 9), graph traversal appends
+          <em>structural</em> neighbors (5) that share an explicit <code>[[link]]</code> — then
+          <code>generate_answer</code> assembles the union into one context. The result is context
+          organized by how the ideas actually relate in the vault, not only by how similar their
+          wording is.</p>
+          <p><strong>Does the attention mechanism itself get better?</strong> No — the transformer's
+          self-attention math is unchanged. What changes is the material it has to work with. If
+          Node 5 is never retrieved, no amount of attention can connect "Computer Vision" and "NLP"
+          — the tokens simply aren't in the prompt. Once <code>graph_traverser</code> puts Node 5's
+          text in the context window, self-attention can form cross-connections between the two
+          topics that were structurally invisible to it a moment before. Retrieval isn't making
+          attention smarter; it's removing a blind spot attention had no way to fix on its own.</p>
+          <div class="qa-verdict">
+            <strong>Bottom line:</strong> a detective given five witness statements that all say
+            "bank robbery" learns less than one given two statements plus the getaway driver's
+            logbook a witness happened to reference. <code>graph_traverser</code> is what hands the
+            LLM that logbook — the attention mechanism still has to read it, but it can't read what
+            was never in the room.
+          </div>
+          <p class="qa-source">
+            Related: <a href="#what">try it yourself in the demo above</a>,
+            <a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_poc.md" target="_blank" rel="noopener">formula_poc.md</a>
+            (the full trace this screenshot is from).
+          </p>
         </div>
       </div>
     </div>
