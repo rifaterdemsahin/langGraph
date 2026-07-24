@@ -375,6 +375,124 @@
   .concept-card a { color: var(--accent); text-decoration: none; }
   .concept-card a:hover { text-decoration: underline; }
 
+  .compare-wrap { margin-top: 1.4rem; }
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 780px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-panel {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-alt);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .compare-head {
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: white;
+  }
+  .compare-panel.limit .compare-head { background: color-mix(in srgb, var(--accent) 75%, black 10%); }
+  .compare-panel.solve .compare-head { background: color-mix(in srgb, var(--accent-2) 70%, black 10%); }
+  .compare-body { padding: 1rem 1.1rem 1.2rem; }
+  .compare-step {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 0.7rem;
+    font-size: 0.85rem;
+  }
+  .compare-step .num {
+    flex: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; color: white;
+  }
+  .compare-panel.limit .compare-step .num { background: var(--accent); }
+  .compare-panel.solve .compare-step .num { background: var(--accent-2); }
+  .compare-step b { display: block; }
+  .compare-step span.detail { color: var(--text-dim); font-size: 0.82rem; }
+  .compare-outcome {
+    margin-top: 0.6rem;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .compare-panel.limit .compare-outcome { background: color-mix(in srgb, var(--warn) 12%, var(--bg-alt)); color: var(--warn); }
+  .compare-panel.solve .compare-outcome { background: color-mix(in srgb, var(--accent-2) 14%, var(--bg-alt)); color: var(--accent-2); }
+  .compare-badges {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin-top: 1rem;
+  }
+  @media (max-width: 720px) { .compare-badges { grid-template-columns: 1fr; } }
+  .compare-badge {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.8rem;
+  }
+  .compare-badge b { display: block; font-size: 0.82rem; margin-bottom: 0.15rem; }
+  .compare-badge span { color: var(--text-dim); }
+
+  .qa-list { display: flex; flex-direction: column; gap: 1rem; }
+  .qa-card {
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 1.3rem 1.5rem;
+  }
+  .qa-card .q {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    font-weight: 700;
+    font-size: 1rem;
+    margin: 0 0 0.7rem;
+  }
+  .qa-card .q .qmark {
+    flex: none;
+    color: var(--accent);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .qa-card .a { font-size: 0.93rem; color: var(--text); }
+  .qa-card .a p { margin: 0 0 0.8rem; }
+  .qa-card .a p:last-child { margin-bottom: 0; }
+  .qa-card .a code { font-size: 0.87em; }
+  .qa-card .a a { color: var(--accent); text-decoration: none; }
+  .qa-card .a a:hover { text-decoration: underline; }
+  table.qa-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin: 0.9rem 0;
+  }
+  table.qa-table th, table.qa-table td {
+    text-align: left;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.qa-table th { background: var(--code-bg); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+  .qa-verdict {
+    border-left: 3px solid var(--accent);
+    padding: 0.6rem 0.9rem;
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg-alt));
+    border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+  }
+  .qa-source { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.8rem; }
+
   footer {
     margin-top: 4rem;
     padding-top: 1.5rem;
@@ -396,6 +514,7 @@
     <a class="nav-link" href="#learn-path">Learning Path</a>
     <a class="nav-link" href="#concepts">Concepts</a>
     <a class="nav-link" href="#repo-docs">Docs</a>
+    <a class="nav-link" href="#questions">Questions</a>
     <a class="nav-link external" href="https://github.com/rifaterdemsahin/langGraph/blob/main/6_Symbols/run_graph_rag.py" target="_blank" rel="noopener">run_graph_rag.py</a>
     <a class="nav-link external" href="https://github.com/rifaterdemsahin/langGraph/blob/main/6_Symbols/ingest.py" target="_blank" rel="noopener">ingest.py</a>
     <a class="nav-highlight" href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_qdrant_scale.md" target="_blank" rel="noopener">Qdrant @ 200k+ files</a>
@@ -446,6 +565,47 @@
         <p>The LLM gets both the notes that <em>sound</em> relevant and the notes that are
         <em>structurally connected</em> to them — a strictly richer context window.</p>
       </div>
+    </div>
+
+    <div class="compare-wrap">
+      <h3 style="font-size:1.05rem;margin:0 0 0.4rem;">Why the related documents matter</h3>
+      <p class="section-sub" style="margin-bottom:1rem;">
+        The difference below is the entire reason this project exists: a plain vector lookup stops
+        at whatever "sounds" like the query, while following <code>[[links]]</code> reaches notes
+        that are relevant but worded completely differently.
+      </p>
+      <div class="compare-grid">
+        <div class="compare-panel limit">
+          <div class="compare-head">The limitation: pure semantic search</div>
+          <div class="compare-body">
+            <div class="compare-step"><div class="num">1</div><div><b>Your query</b></div></div>
+            <div class="compare-step"><div class="num">2</div><div><b>Vector database lookup</b><span class="detail"> — standard LangChain RAG retrieval</span></div></div>
+            <div class="compare-step"><div class="num">3</div><div><b>Retrieval finds things that <em>sound</em> similar</b>
+              <span class="detail"> — misses <code>[[Note B]]</code> and <code>[[Note C]]</code> because their phrasing doesn't match the query, even though they're the linked notes that actually answer it</span></div></div>
+            <div class="compare-outcome">Generic, partial answer</div>
+          </div>
+        </div>
+        <div class="compare-panel solve">
+          <div class="compare-head">The solution: graph-orchestrated RAG</div>
+          <div class="compare-body">
+            <div class="compare-step"><div class="num">1</div><div><b>Your query</b></div></div>
+            <div class="compare-step"><div class="num">2</div><div><b>Semantic search finds the initial hit</b><span class="detail"> — same LangChain vector step as before</span></div></div>
+            <div class="compare-step"><div class="num">3</div><div><b>LangGraph orchestration follows the links</b>
+              <span class="detail"> — 1 hop, 2 hops: found, found — pulling in the connected notes semantic search alone would miss</span></div></div>
+            <div class="compare-outcome">Complete, actionable answer</div>
+          </div>
+        </div>
+      </div>
+      <div class="compare-badges">
+        <div class="compare-badge"><b>Context breadth</b><span>finding multi-hop context a single vector lookup can't reach</span></div>
+        <div class="compare-badge"><b>Phrasing independence</b><span>a link doesn't care that your terminology changed between notes</span></div>
+        <div class="compare-badge"><b>Structural knowledge</b><span>the <code>[[link]]</code> graph you already built by note-taking gets put to work, not thrown away</span></div>
+      </div>
+      <p class="diagram-caption">
+        This is why "related documents" specifically — not just "more documents" — are the point:
+        the notes reached by a link are the ones an author explicitly said belong together, which is
+        exactly the signal a similarity score over word choice cannot see.
+      </p>
     </div>
   </section>
 
@@ -750,6 +910,10 @@
           <td>Rationale: what a 200k+ file second brain needs from Qdrant + LangGraph</td>
         </tr>
         <tr>
+          <td><a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_when_to_use.md" target="_blank" rel="noopener">formula_when_to_use.md</a></td>
+          <td>Use cases: when LangChain/LangGraph earn their keep, and when to skip them</td>
+        </tr>
+        <tr>
           <td><a href="https://github.com/rifaterdemsahin/langGraph/blob/main/1_Journey/okr.md" target="_blank" rel="noopener">okr.md</a></td>
           <td>Objectives and key results driving this project</td>
         </tr>
@@ -759,6 +923,117 @@
         </tr>
       </tbody>
     </table>
+  </section>
+
+  <!-- QUESTIONS -->
+  <section id="questions">
+    <h2>Questions</h2>
+    <p class="section-sub">
+      Real questions asked while building this project, answered directly and shared here for the
+      next person who wonders the same thing.
+    </p>
+    <div class="qa-list">
+      <div class="qa-card">
+        <p class="q"><span class="qmark">Q</span> With 200k+ documents and a limited context window, does that mean we need LangChain/LangGraph
+        <em>more</em> — and if we had enough context, would we not need them at all?</p>
+        <div class="a">
+          <p>
+            This conflates two different constraints. <strong>Context window size</strong> is a
+            <em>budget</em> (how many tokens fit in one call). <strong>Corpus size</strong> — 200k
+            documents — is a <em>selection</em> problem (which of those 200k things actually matter
+            for this one query). A bigger budget doesn't make the selection problem go away.
+          </p>
+          <p>
+            200k markdown files is easily tens of millions of tokens — far beyond any practical
+            context window, "unlimited" or not. And even where a huge context <em>would</em>
+            technically fit everything, long-context research consistently shows models attend
+            unevenly across very long inputs (the "lost in the middle" effect) — so dumping in
+            everything degrades answer quality and blows up cost/latency for no benefit. You still
+            want to hand the model the <em>right</em> handful of documents, not all of them.
+          </p>
+          <table class="qa-table">
+            <thead>
+              <tr><th></th><th>Limited context (8k–32k)</th><th>Very large / "unlimited" context</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Still need retrieval to select relevant docs from 200k?</td>
+                <td>Yes — no choice</td>
+                <td>Yes — 200k files is still tens of millions of tokens</td>
+              </tr>
+              <tr>
+                <td>Still need <code>graph_traverser</code>-style link expansion?</td>
+                <td>Yes, tightly bounded (small <code>top_k</code>)</td>
+                <td>Yes, though you can afford a wider <code>top_k</code></td>
+              </tr>
+              <tr>
+                <td>Still benefits from LangGraph's explicit multi-step control?</td>
+                <td>Yes — essential to make every token count</td>
+                <td>Yes — still the clearest way to avoid noisy context that "lost in the middle" punishes</td>
+              </tr>
+              <tr>
+                <td>What actually changes</td>
+                <td>Chunk size / <code>top_k</code> must be small and precise</td>
+                <td>Chunk size / <code>top_k</code> can be looser; less aggressive pruning needed</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="qa-verdict">
+            <strong>Bottom line:</strong> LangChain/LangGraph aren't a workaround for small context
+            windows — they're for deciding <em>what belongs in context at all</em>, at any window
+            size. That job gets more important, not less, as a corpus grows toward 200k+ files
+            (see <a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_qdrant_scale.md" target="_blank" rel="noopener">formula_qdrant_scale.md</a>),
+            regardless of how generous the context window is.
+          </div>
+          <p class="qa-source">
+            Related: <a href="#how">How it's wired</a> (why <code>graph_traverser</code> exists),
+            <a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_size.md" target="_blank" rel="noopener">formula_size.md</a>
+            (why the in-memory PoC breaks at scale).
+          </p>
+        </div>
+      </div>
+
+      <div class="qa-card">
+        <p class="q"><span class="qmark">Q</span> Why are <em>related</em> (linked) documents specifically important — why not just retrieve more documents?</p>
+        <div class="a">
+          <p>
+            Because "more documents" and "related documents" solve different problems. Retrieving
+            more top-<code>k</code> results from a vector search still only surfaces notes that
+            <em>sound</em> like the query — it just lowers the similarity bar, which mostly adds
+            noise. It does nothing for the note that answers the question perfectly but uses
+            different words, because a similarity score over word choice can't see a relationship
+            that was never expressed in shared vocabulary.
+          </p>
+          <p>
+            A <code>[[link]]</code> is a different kind of signal entirely: it's the author
+            explicitly saying "these two notes belong together," recorded at write time,
+            independent of how either note happens to be phrased. That's what the
+            <a href="#why">comparison diagram above</a> shows — pure semantic search misses
+            <code>[[Note B]]</code> and <code>[[Note C]]</code> not because they're irrelevant, but
+            because nothing in their wording matches the query; <code>graph_traverser</code> finds
+            them anyway by walking 1–2 hops from whatever <em>did</em> match semantically.
+          </p>
+          <p>
+            Three concrete effects, mapped to the badges in that diagram:
+          </p>
+          <ul style="margin:0 0 0.8rem;padding-left:1.2rem;font-size:0.9rem;">
+            <li><strong>Context breadth</strong> — reaches multi-hop context a single vector lookup
+            structurally cannot, no matter how the similarity threshold is tuned.</li>
+            <li><strong>Phrasing independence</strong> — a link survives vocabulary drift between
+            notes written months apart on the same topic; embeddings alone are sensitive to exactly
+            that drift.</li>
+            <li><strong>Structural knowledge</strong> — every <code>[[link]]</code> a note-taker
+            already wrote is free, hand-curated relevance signal; discarding it and relying on
+            embeddings alone throws away work that's already been done.</li>
+          </ul>
+          <div class="qa-verdict">
+            <strong>Bottom line:</strong> retrieving more documents widens the net with the same
+            mesh size; following related documents changes what the net can catch in the first
+            place.
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <footer>
