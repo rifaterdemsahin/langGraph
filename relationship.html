@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How LangChain and LangGraph Relate</title>
+<meta name="description" content="A visual, kid-simple explanation of how LangChain and LangGraph fit together." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='80'%3E%F0%9F%A7%A9%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --bg-alt: #ffffff;
+    --text: #1c1c1e;
+    --text-dim: #55555c;
+    --border: #e2e1dd;
+    --accent: #7a5cff;
+    --accent-2: #10a37f;
+    --accent-3: #e08a2d;
+    --warn: #d1483d;
+    --code-bg: #efeee9;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15151a; --bg-alt: #1d1d24; --text: #eceaf5; --text-dim: #a2a0b3;
+      --border: #313140; --accent: #a48bff; --accent-2: #3ddc9a; --accent-3: #f2a54a;
+      --warn: #ff8177; --code-bg: #26262f;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 30px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15151a; --bg-alt: #1d1d24; --text: #eceaf5; --text-dim: #a2a0b3;
+    --border: #313140; --accent: #a48bff; --accent-2: #3ddc9a; --accent-3: #f2a54a;
+    --warn: #ff8177; --code-bg: #26262f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 30px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    line-height: 1.55;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+
+  nav.topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.topnav .topnav-inner {
+    max-width: 980px; margin: 0 auto; padding: 0 1.5rem; height: 52px;
+    display: flex; align-items: center; gap: 1.4rem; overflow-x: auto; white-space: nowrap;
+  }
+  nav.topnav .brand { font-weight: 700; font-size: 0.9rem; color: var(--text); text-decoration: none; margin-right: 0.4rem; flex: none; }
+  nav.topnav a.nav-link { font-size: 0.85rem; color: var(--text-dim); text-decoration: none; flex: none; }
+  nav.topnav a.nav-link:hover { color: var(--accent); }
+  nav.topnav a.nav-link.current { color: var(--accent); font-weight: 700; }
+
+  header.hero { padding: 2.5rem 0 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 2.5rem; }
+  .kicker { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.72rem; color: var(--accent); font-weight: 700; margin-bottom: 0.6rem; }
+  h1 { font-size: clamp(1.6rem, 3.2vw, 2.3rem); margin: 0 0 0.6rem; letter-spacing: -0.02em; }
+  .hero p.lead { color: var(--text-dim); font-size: 1.05rem; max-width: 62ch; margin: 0; }
+
+  section { margin: 3.2rem 0; }
+  section > h2 { font-size: 1.35rem; margin: 0 0 0.3rem; letter-spacing: -0.01em; }
+  section > .section-sub { color: var(--text-dim); margin: 0 0 1.2rem; max-width: 68ch; }
+
+  .kid-hint {
+    display: flex; gap: 0.7rem; align-items: flex-start;
+    margin: 1rem 0 0;
+    border: 1px dashed color-mix(in srgb, var(--accent-3) 55%, var(--border));
+    background: color-mix(in srgb, var(--accent-3) 9%, var(--bg-alt));
+    border-radius: 12px; padding: 0.8rem 1rem; font-size: 0.9rem;
+  }
+  .kid-hint .badge {
+    flex: none; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--accent-3); white-space: nowrap; padding-top: 0.1rem;
+  }
+  .kid-hint p { margin: 0; }
+
+  .toolbox-row { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.2rem; }
+  .tool-card {
+    flex: 1 1 140px; border: 1px solid var(--border); background: var(--bg-alt);
+    border-radius: 12px; padding: 0.9rem 0.9rem; box-shadow: var(--shadow); text-align: center;
+  }
+  .tool-card .icon { font-size: 1.5rem; }
+  .tool-card b { display: block; font-size: 0.85rem; margin: 0.3rem 0 0.15rem; }
+  .tool-card span { font-size: 0.76rem; color: var(--text-dim); }
+
+  .diagram-scroll {
+    overflow-x: auto; border: 1px solid var(--border); border-radius: 14px;
+    background: var(--bg-alt); box-shadow: var(--shadow); padding: 0.6rem; margin-top: 1.2rem;
+  }
+  .diagram-scroll svg { display: block; min-width: 620px; }
+  .diagram-caption { font-size: 0.82rem; color: var(--text-dim); margin-top: 0.6rem; }
+
+  code { background: var(--code-bg); padding: 0.1rem 0.35rem; border-radius: 5px; font-size: 0.88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  table.compare {
+    width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 1rem;
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  }
+  table.compare th, table.compare td { text-align: left; padding: 0.65rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.compare th { background: var(--code-bg); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+  table.compare td.row-label { font-weight: 600; color: var(--text-dim); width: 18%; }
+  table.compare tr:last-child td { border-bottom: none; }
+
+  .verdict-box {
+    margin-top: 1.4rem; border-left: 3px solid var(--accent); padding: 0.8rem 1rem;
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg-alt)); border-radius: 0 10px 10px 0; font-size: 0.95rem;
+  }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 0.85rem; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="index.html">🕸️ LangGraph PoC</a>
+    <a class="nav-link" href="index.html#why">Why</a>
+    <a class="nav-link" href="index.html#how">How</a>
+    <a class="nav-link" href="index.html#what">Demo</a>
+    <a class="nav-link" href="index.html#learn-path">Learning Path</a>
+    <a class="nav-link current" href="relationship.html">LangChain ↔ LangGraph</a>
+    <a class="nav-link" href="index.html#questions">Questions</a>
+    <a class="nav-link" href="index.html#repo-docs">Docs</a>
+  </div>
+</nav>
+
+<main id="top">
+
+  <header class="hero">
+    <div class="kicker">The relationship, explained visually</div>
+    <h1>How LangChain and LangGraph fit together</h1>
+    <p class="lead">
+      They get mentioned in the same breath so often that it's easy to assume they're the same
+      thing, or two versions of the same thing. They're not. This page explains the difference —
+      and every section ends with a simple hint for the idea, the way you'd explain it to a
+      10-year-old.
+    </p>
+    <div class="kid-hint">
+      <span class="badge">🧒 Start here</span>
+      <p><strong>LangChain is a box of tools. LangGraph is the person deciding which tool to
+      pick up next</strong> — and what to do if something doesn't work the first time.</p>
+    </div>
+  </header>
+
+  <!-- LANGCHAIN -->
+  <section id="langchain">
+    <h2>1. What LangChain actually is</h2>
+    <p class="section-sub">
+      LangChain is a collection of separate, ready-made pieces for working with an LLM. Each piece
+      does exactly one job — loading a file, splitting text, turning text into numbers, storing and
+      searching those numbers, formatting a prompt, calling the model — and none of them know or
+      care what happens before or after them. They're independent tools, not a plan.
+    </p>
+    <div class="toolbox-row">
+      <div class="tool-card"><div class="icon">📄</div><b>Loader</b><span>reads a file into text</span></div>
+      <div class="tool-card"><div class="icon">✂️</div><b>Splitter</b><span>cuts text into chunks</span></div>
+      <div class="tool-card"><div class="icon">🔢</div><b>Embedder</b><span>turns text into numbers</span></div>
+      <div class="tool-card"><div class="icon">🗄️</div><b>Vector store</b><span>stores + searches those numbers</span></div>
+      <div class="tool-card"><div class="icon">📝</div><b>Prompt template</b><span>fills in a question format</span></div>
+      <div class="tool-card"><div class="icon">🤖</div><b>Model caller</b><span>sends the prompt to an LLM</span></div>
+    </div>
+    <div class="kid-hint">
+      <span class="badge">🧒 Like you're 10</span>
+      <p>Think of a pencil case: a pencil, an eraser, a ruler, scissors. Each thing is useful on its
+      own. But the pencil case itself doesn't tell you what order to use them in for your homework
+      — that's not its job.</p>
+    </div>
+  </section>
+
+  <!-- LANGGRAPH -->
+  <section id="langgraph">
+    <h2>2. What LangGraph actually is</h2>
+    <p class="section-sub">
+      LangGraph doesn't do any of that work itself. It's the flowchart that says "do this step,
+      then this step — and if this happens, go back and try a different way." It keeps track of
+      what's been learned so far as it moves between steps ("nodes"), and it can branch, loop, or
+      retry — things a single tool, or a single prompt, can't do on its own.
+    </p>
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A flowchart showing LangGraph as a sequence of steps with a conditional retry loop">
+        <defs>
+          <marker id="lg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--text-dim)"></path>
+          </marker>
+        </defs>
+        <rect x="20" y="80" width="130" height="55" rx="10" fill="var(--code-bg)" stroke="var(--border)"></rect>
+        <text x="85" y="112" text-anchor="middle" style="font-size:12px;fill:var(--text);font-weight:600">Step 1</text>
+
+        <line x1="150" y1="107" x2="195" y2="107" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#lg-arrow)"></line>
+
+        <rect x="200" y="80" width="130" height="55" rx="10" fill="var(--code-bg)" stroke="var(--accent-3)" stroke-width="1.6"></rect>
+        <text x="265" y="106" text-anchor="middle" style="font-size:12px;fill:var(--text);font-weight:600">Step 2</text>
+        <text x="265" y="121" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">"good enough?"</text>
+
+        <path d="M265,80 C 265,30 150,30 150,72" stroke="var(--warn)" stroke-width="1.4" fill="none" marker-end="url(#lg-arrow)"></path>
+        <text x="207" y="35" text-anchor="middle" style="font-size:9px;fill:var(--warn)">no — try again</text>
+
+        <line x1="330" y1="107" x2="375" y2="107" stroke="var(--accent-2)" stroke-width="1.6" marker-end="url(#lg-arrow)"></line>
+        <text x="352" y="97" text-anchor="middle" style="font-size:9px;fill:var(--accent-2)">yes</text>
+
+        <rect x="380" y="80" width="130" height="55" rx="10" fill="var(--code-bg)" stroke="var(--border)"></rect>
+        <text x="445" y="112" text-anchor="middle" style="font-size:12px;fill:var(--text);font-weight:600">Step 3</text>
+
+        <line x1="510" y1="107" x2="555" y2="107" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#lg-arrow)"></line>
+        <rect x="558" y="83" width="65" height="48" rx="10" fill="color-mix(in srgb, var(--accent-2) 18%, var(--bg-alt))" stroke="var(--accent-2)"></rect>
+        <text x="590" y="112" text-anchor="middle" style="font-size:11px;fill:var(--text);font-weight:700">Done</text>
+
+        <text x="320" y="175" text-anchor="middle" style="font-size:10px;fill:var(--text-dim)">This "check, and maybe loop back" branch is exactly what a single prompt — or a lone LangChain tool — cannot do by itself.</text>
+      </svg>
+    </div>
+    <div class="kid-hint">
+      <span class="badge">🧒 Like you're 10</span>
+      <p>Now imagine your homework instructions: "Read the question. Look it up. If you're still
+      not sure, look it up again a different way. Then write your answer." That plan — including
+      the "if you're not sure, try again" part — is what LangGraph is. It's the plan, not the
+      pencil case.</p>
+    </div>
+  </section>
+
+  <!-- HOW THEY RELATE -->
+  <section id="relate">
+    <h2>3. How they relate — LangGraph is the plan, LangChain fills in some of the steps</h2>
+    <p class="section-sub">
+      This is the part people mix up: LangGraph doesn't replace LangChain, and LangChain can't do
+      what LangGraph does. LangGraph is the outer shape — the order of steps, and what happens
+      when a step succeeds or fails. Some of those steps happen to use a LangChain tool. Some
+      don't need to at all. Here's this repo's own pipeline as a real example:
+    </p>
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LangGraph's three-node pipeline, showing which nodes use a LangChain tool and which don't">
+        <defs>
+          <marker id="rel-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--text-dim)"></path>
+          </marker>
+        </defs>
+
+        <rect x="10" y="20" width="800" height="230" rx="14" fill="none" stroke="var(--accent-3)" stroke-width="1.4" stroke-dasharray="4 3"></rect>
+        <text x="410" y="12" text-anchor="middle" style="font-size:11px;font-weight:700;fill:var(--accent-3)">LangGraph — the plan (StateGraph)</text>
+
+        <rect x="40" y="60" width="200" height="70" rx="10" fill="var(--code-bg)" stroke="var(--accent)" stroke-width="1.6"></rect>
+        <text x="140" y="90" text-anchor="middle" style="font-size:12px;font-weight:700;fill:var(--text)">semantic_retriever</text>
+        <text x="140" y="107" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">Step 1</text>
+
+        <line x1="240" y1="95" x2="290" y2="95" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#rel-arrow)"></line>
+
+        <rect x="295" y="60" width="200" height="70" rx="10" fill="var(--code-bg)" stroke="var(--accent-3)" stroke-width="1.6"></rect>
+        <text x="395" y="90" text-anchor="middle" style="font-size:12px;font-weight:700;fill:var(--text)">graph_traverser</text>
+        <text x="395" y="107" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">Step 2</text>
+
+        <line x1="495" y1="95" x2="545" y2="95" stroke="var(--text-dim)" stroke-width="1.3" marker-end="url(#rel-arrow)"></line>
+
+        <rect x="550" y="60" width="200" height="70" rx="10" fill="var(--code-bg)" stroke="var(--accent-2)" stroke-width="1.6"></rect>
+        <text x="650" y="90" text-anchor="middle" style="font-size:12px;font-weight:700;fill:var(--text)">generate_answer</text>
+        <text x="650" y="107" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">Step 3</text>
+
+        <line x1="140" y1="130" x2="140" y2="165" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="3 2" marker-end="url(#rel-arrow)"></line>
+        <rect x="55" y="168" width="170" height="60" rx="10" fill="color-mix(in srgb, var(--accent) 14%, var(--bg-alt))" stroke="var(--accent)"></rect>
+        <text x="140" y="190" text-anchor="middle" style="font-size:10.5px;font-weight:700;fill:var(--text)">uses LangChain</text>
+        <text x="140" y="206" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">embeddings + vector search</text>
+        <text x="140" y="219" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">🧰 tool from the box</text>
+
+        <line x1="395" y1="130" x2="395" y2="165" stroke="var(--text-dim)" stroke-width="1.3" stroke-dasharray="3 2" marker-end="url(#rel-arrow)"></line>
+        <rect x="310" y="168" width="170" height="60" rx="10" fill="var(--bg-alt)" stroke="var(--border)"></rect>
+        <text x="395" y="190" text-anchor="middle" style="font-size:10.5px;font-weight:700;fill:var(--text)">plain Python</text>
+        <text x="395" y="206" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">walks our own link dict</text>
+        <text x="395" y="219" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">🙌 no tool needed here</text>
+
+        <line x1="650" y1="130" x2="650" y2="165" stroke="var(--accent-2)" stroke-width="1.3" stroke-dasharray="3 2" marker-end="url(#rel-arrow)"></line>
+        <rect x="565" y="168" width="170" height="60" rx="10" fill="color-mix(in srgb, var(--accent-2) 14%, var(--bg-alt))" stroke="var(--accent-2)"></rect>
+        <text x="650" y="190" text-anchor="middle" style="font-size:10.5px;font-weight:700;fill:var(--text)">uses LangChain</text>
+        <text x="650" y="206" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">prompt template + LLM call</text>
+        <text x="650" y="219" text-anchor="middle" style="font-size:9px;fill:var(--text-dim)">🧰 tool from the box</text>
+      </svg>
+    </div>
+    <p class="diagram-caption">
+      <code>graph_traverser</code> is the clearest proof they're not the same thing: it's a
+      LangGraph node that uses <em>no LangChain tool at all</em> — just a Python dictionary lookup.
+      LangGraph doesn't care what's inside a step. It only cares about the order, and what to do
+      next.
+    </p>
+    <div class="kid-hint">
+      <span class="badge">🧒 Like you're 10</span>
+      <p>LangGraph is the plan: "Step 1, Step 2, Step 3." For Step 1 and Step 3, the plan says
+      "grab a tool from the pencil case" (that's LangChain). For Step 2, the plan just says "use
+      your own two hands" — no tool needed. LangGraph doesn't mind either way. It only cares about
+      what order things happen in, and what to do if a step doesn't work.</p>
+    </div>
+  </section>
+
+  <!-- COMPARISON TABLE -->
+  <section id="compare">
+    <h2>4. Side by side</h2>
+    <table class="compare">
+      <thead><tr><th></th><th>LangChain</th><th>LangGraph</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="row-label">What it is</td>
+          <td>A toolbox of ready-made pieces (load, split, embed, search, prompt, call model)</td>
+          <td>A flowchart/state machine that wires steps together in a chosen order</td>
+        </tr>
+        <tr>
+          <td class="row-label">Good at</td>
+          <td>Doing one well-defined job really well</td>
+          <td>Deciding order, branching, looping, retrying, remembering what happened so far</td>
+        </tr>
+        <tr>
+          <td class="row-label">Not built for</td>
+          <td>Deciding what order to do things in, or what to do if a step fails</td>
+          <td>Loading files or calling an embedding model itself — it delegates that to whatever a step uses</td>
+        </tr>
+        <tr>
+          <td class="row-label">🧒 Kid version</td>
+          <td>The pencil case</td>
+          <td>The homework plan</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="verdict-box">
+      <strong>Bottom line:</strong> LangGraph is not "LangChain, but newer" — it's a different
+      layer that sits <em>around</em> LangChain (and around plain code, when that's all a step
+      needs). LangChain supplies ingredients; LangGraph supplies the recipe.
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>5. So which one do I need?</h2>
+    <p class="section-sub">
+      Need one well-defined job done (load a file, search for similar text)? That's LangChain.
+      Need several steps done <em>in order</em>, with branching or retries? That's LangGraph. Need
+      both, wired together? That's this whole repo — see
+      <a href="https://github.com/rifaterdemsahin/langGraph/blob/main/5_Formula/formula_when_to_use.md" target="_blank" rel="noopener" style="color:var(--accent)">formula_when_to_use.md</a>
+      for the full use-case breakdown, and the <a href="index.html#how" style="color:var(--accent)">How it's wired</a>
+      section back on the main page for how these two pieces plug into the actual PoC.
+    </p>
+    <div class="kid-hint">
+      <span class="badge">🧒 One more time</span>
+      <p>If you only need one tool, just grab the tool — you don't need a whole plan for using one
+      pencil. But the moment your homework has more than one step, and some steps depend on how the
+      last one went, you need a plan. That plan is LangGraph.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <a href="index.html">← Back to the main walkthrough</a> ·
+      <a href="https://github.com/rifaterdemsahin/langGraph" target="_blank" rel="noopener">rifaterdemsahin/langGraph</a>
+    </p>
+  </footer>
+</main>
+</body>
+</html>
